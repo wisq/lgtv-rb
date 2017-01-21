@@ -10,8 +10,9 @@ class PowerOff
 
   def run
     LGTV::Remote.new(address: @address, client_key: load_key) do |remote|
-      remote.power_off
-      exit(0)
+      remote.power_off do
+	exit(0)
+      end
     end
   end
 

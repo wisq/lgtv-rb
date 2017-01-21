@@ -103,7 +103,7 @@ class LGTV::Remote
 
   def register
     payload = HANDSHAKE_PAYLOAD
-    payload = payload.merge('client-key': @client_key) if @client_key
+    payload = payload.merge(:'client-key' => @client_key) if @client_key
     raw_send('register', 'reg0', nil, payload)
     callback('reg0') do |type, payload|
       if type == 'response'
@@ -166,8 +166,8 @@ class LGTV::Remote
       {text: text, replace: replace}, &block)
   end
 
-  def power_off
-    request('system/turnOff')
+  def power_off(&block)
+    request('system/turnOff', &block)
   end
 
   def list_inputs
