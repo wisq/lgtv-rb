@@ -29,7 +29,6 @@ class Remote
   end
 
   def run
-    load_key
     LGTV::Remote.new(address: @address, client_key: load_key) do |remote|
       save_key(remote.client_key)
       @remote = remote
@@ -117,5 +116,5 @@ class Remote
 end
 
 EM.run do
-  Remote.new('192.168.68.11').run
+  Remote.new(ARGV.first).run
 end
