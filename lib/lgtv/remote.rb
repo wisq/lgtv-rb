@@ -166,6 +166,10 @@ class LGTV::Remote
       {text: text, replace: replace}, &block)
   end
 
+  def power_off
+    request('system/turnOff')
+  end
+
   def list_inputs
     request('tv/getExternalInputList') do |response|
       p response
