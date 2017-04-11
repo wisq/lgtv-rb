@@ -120,7 +120,6 @@ class Remote
 
   def cmd_volume_up(char)
     @remote.volume_up
-    @remote.get_volume
   end
 
   def cmd_input(char)

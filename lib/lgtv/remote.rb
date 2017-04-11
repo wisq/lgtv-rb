@@ -181,10 +181,9 @@ class LGTV::Remote
     request('audio/volumeDown', &block)
   end
 
-  #def get_volume
-  #  request('audio/getVolume') do |p|
-  #  end
-  #end
+  def get_volume(&block)
+    request('audio/getVolume', &block)
+  end
 
   def delete_characters(count, &block)
     request('com.webos.service.ime/deleteCharacters', {count: count}, &block)
