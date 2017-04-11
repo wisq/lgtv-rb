@@ -16,7 +16,18 @@ class Remote
     'i' => :cmd_input,
     'a' => :cmd_app,
     'h' => :cmd_help,
+    "\e" => :cmd_escape,
+    "\r" => :cmd_click,
+    "\u007F" => [:cmd_button, 'BACK'],
   }
+
+  ESCAPE_COMMANDS = {
+    "[A" => [:cmd_button, 'UP'],
+    "[B" => [:cmd_button, 'DOWN'],
+    "[D" => [:cmd_button, 'LEFT'],
+    "[C" => [:cmd_button, 'RIGHT'],
+  }
+  ESCAPE_MAX_LEN = ESCAPE_COMMANDS.keys.map(&:length).max
 
   TEXT_ENTRY_COMMANDS = {
     "\e" => :cmd_text_exit,
@@ -57,11 +68,14 @@ class Remote
   end
 
   def interact
-    char = $stdin.getch
+    command($stdin.getch)
+  end
+
+  def command(char)
     method = @commands[char]
 
     if method
-      send(method, char)
+      send(*method, char)
     else
       puts "Unknown key: #{char.inspect}"
     end
@@ -106,12 +120,51 @@ class Remote
 
   def cmd_volume_up(char)
     @remote.volume_up
+    @remote.get_volume
   end
 
   def cmd_input(char)
     @inputs = @remote.list_inputs
     puts "Select an input:"
     p @inputs
+  end
+
+  class UnknownCommand < StandardError; end
+
+  def cmd_escape(char)
+    sequence = ""
+    next_char = nil
+
+    Timeout.timeout(0.05) do
+      loop do
+        next_char = $stdin.getch
+        break if next_char == '\e'
+
+        sequence += next_char
+        next_char = nil
+
+        cmd = ESCAPE_COMMANDS[sequence]
+        return send(*cmd, sequence) if cmd
+
+        raise UnknownCommand if sequence.length >= ESCAPE_MAX_LEN
+      end
+    end
+  rescue Timeout::Error, UnknownCommand
+    if sequence.empty?
+      puts "Empty escape sequence.  (To quit, press 'q'.)"
+    else
+      puts "Unknown escape sequence: #{sequence.inspect}"
+    end
+  end
+
+  def cmd_button(name, sequence)
+    #puts "Sending key: #{name}"
+    @remote.button(name)
+  end
+
+  def cmd_click(char)
+    #puts "Sending click."
+    @remote.click
   end
 end
 

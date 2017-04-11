@@ -73,8 +73,29 @@ class LGTV::Remote
   end
 
   def on_open(handshake)
-    puts "Connected.  Registering ..."
-    register
+    @setup_stage = 0
+    setup
+  end
+
+  def setup
+    @setup_stage += 1
+    if @setup_stage == 1
+      puts "Connected.  Registering ..."
+      register
+    elsif @setup_stage == 2
+      puts "Registered.  Establishing pointer socket ..."
+      request('com.webos.service.networkinput/getPointerInputSocket', {}) do |response|
+        uri = response.fetch('socketPath')
+        @pointer = WebSocket::EventMachine::Client.connect(:uri => uri.to_s)
+        @pointer.onopen { |*args| setup }
+        @pointer.onclose { |*args| puts "pointer closed" }
+        @pointer.onerror { |*args| puts "pointer error: #{args.inspect}" }
+        @pointer.onmessage { |*args| puts "pointer message: #{args.inspect}" }
+      end
+    elsif @setup_stage == 3
+      puts "Ready!"
+      @register_callback.call(self) if @register_callback
+    end
   end
 
   def on_close(*args)
@@ -93,6 +114,8 @@ class LGTV::Remote
       payload = data[if type == 'error' then 'error' else 'payload' end]
       retval = callback.call(type, payload)
       @callbacks[id] = callback if retval == :keep
+    else
+      puts "Unknown callback: #{id.inspect}"
     end
   end
 
@@ -110,9 +133,8 @@ class LGTV::Remote
         puts "Waiting for TV user response ..."
         :keep
       elsif type == 'registered'
-        puts "Ready!"
         @client_key = payload['client-key']
-        @register_callback.call(self) if @register_callback
+        setup
       else
         raise "Weird message during register: #{type}"
       end
@@ -136,15 +158,17 @@ class LGTV::Remote
   def request(uri, payload={})
     cid = next_cid
     raw_send('request', cid, "ssap://#{uri}", payload)
-    if block_given?
-      callback(cid) do |type, resp_payload|
-        if type == 'error'
-          raise resp_payload
-        elsif type == 'response'
-          yield resp_payload
+    callback(cid) do |type, resp_payload|
+      if type == 'error'
+        raise resp_payload
+      elsif type == 'response'
+        if resp_payload['returnValue'] == true
+          yield resp_payload if block_given?
         else
-          raise "Unknown type: #{type}"
+          puts "Request #{cid.inspect} for #{uri.inspect} failed."
         end
+      else
+        raise "Unknown type: #{type}"
       end
     end
   end
@@ -156,6 +180,11 @@ class LGTV::Remote
   def volume_down(&block)
     request('audio/volumeDown', &block)
   end
+
+  #def get_volume
+  #  request('audio/getVolume') do |p|
+  #  end
+  #end
 
   def delete_characters(count, &block)
     request('com.webos.service.ime/deleteCharacters', {count: count}, &block)
@@ -174,5 +203,13 @@ class LGTV::Remote
     request('tv/getExternalInputList') do |response|
       p response
     end
+  end
+
+  def button(name)
+    @pointer.send("type:button\nname:#{name}\n\n")
+  end
+
+  def click
+    @pointer.send("type:click\n\n")
   end
 end
