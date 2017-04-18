@@ -15,9 +15,10 @@ class Remote
     ']' => :cmd_volume_up,
     'i' => :cmd_input,
     'a' => :cmd_app,
-    'h' => :cmd_help,
+    '?' => :cmd_help,
     "\e" => :cmd_escape,
     "\r" => :cmd_click,
+    'h' => [:cmd_button, 'HOME'],
     "\u007F" => [:cmd_button, 'BACK'],
   }
 
