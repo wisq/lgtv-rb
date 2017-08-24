@@ -21,6 +21,8 @@ class Remote
     'h' => [:cmd_button, 'HOME'],
     "\u007F" => [:cmd_button, 'BACK'],
   }
+  # Number buttons:
+  (1..10).each { |n| REGULAR_COMMANDS[n.to_s] = [:cmd_button, n.to_s] }
 
   ESCAPE_COMMANDS = {
     "[A" => [:cmd_button, 'UP'],
